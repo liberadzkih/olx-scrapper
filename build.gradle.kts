@@ -43,9 +43,11 @@ dependencies {
     // telegram
     implementation("com.github.pengrad:java-telegram-bot-api:6.8.0")
 
+    // spring web to handle controllers
+    implementation("org.springframework.boot:spring-boot-starter-web:3.1.0")
+
 
     implementation("org.springframework.boot:spring-boot-starter")
-
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
