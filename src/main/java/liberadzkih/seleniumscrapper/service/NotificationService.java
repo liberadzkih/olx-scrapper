@@ -17,11 +17,11 @@ public class NotificationService {
     private final static String CHAT_ID = "-980434455";
 
     public void notifyByTelegram(final OlxItem item) {
-        final var response = sendTelegramMessage(buildMessage(item));
+//        final var response = sendTelegramMessage(buildMessage(item));
         log.info("Telegram notification: " + item);
-        if (!response.isOk()) {
-            log.error("Telegram response failure: " + response + "\n" + item);
-        }
+//        if (!response.isOk()) {
+//            log.error("Telegram response failure: " + response + "\n" + item);
+//        }
     }
 
     public SendResponse sendTelegramMessage(final String message) {
