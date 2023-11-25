@@ -1,8 +1,7 @@
 package liberadzkih.seleniumscrapper.config;
 
-import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -27,24 +26,36 @@ class SchedulerConfiguration {
     private final OlxItemRepository olxItemRepository;
     private final NotificationService notificationService;
 
-    @Scheduled(fixedRate = 10000)
-    void scrapOlx() {
-        final var idsFromDb = olxItemRepository.findAll().stream().map(OlxItem::getId).toList();
-        final var adUrlsFromDb = olxItemRepository.findAll().stream().map(OlxItem::getUrl).toList();
+    @Scheduled(fixedRate = 3000)
+    void scrapOlxMain() {
+        scrap(ConfigurationVariables.OLX_URLS_MAIN);
+    }
 
-        ConfigurationVariables.OLX_URLS.forEach(url -> {
+    @Scheduled(fixedRate = 15000)
+    void scrapOlxAdditional() {
+        scrap(ConfigurationVariables.OLX_URLS_ADDITIONAL);
+    }
+
+    private void scrap(final List<String> urls) {
+        var allOlxItem = olxItemRepository.findAll();
+        var idsFromDb = allOlxItem.stream().map(OlxItem::getId).collect(Collectors.toList());
+        var adUrlsFromDb = allOlxItem.stream().map(OlxItem::getUrl).collect(Collectors.toList());
+
+        urls.forEach(url -> {
             CompletableFuture.runAsync(() -> {
-                final var jsoupScrapped = olxJsoupScrapperService.scrap(url);
-                jsoupScrapped.stream()
-                    .filter(Objects::nonNull)
-                    .filter(item -> isUrlValid(item.getUrl())) //validate item url
-                    .filter(item -> !idsFromDb.contains(item.getId()) && !adUrlsFromDb.contains(item.getUrl())) // validate that item id and url not exists in db
-                    .collect(Collectors.toCollection(() -> new TreeSet<>((Comparator.comparing(OlxItem::getId))))).stream() //remove duplicates
-                    .collect(Collectors.toCollection(() -> new TreeSet<>(Comparator.comparing(OlxItem::getUrl)))) //remove duplicates
-                    .forEach(item -> {
-                        notificationService.notifyByTelegram(item);
-                        olxItemRepository.save(item);
-                    });
+            final var jsoupScrapped = olxJsoupScrapperService.scrap(url);
+            jsoupScrapped.stream()
+                .filter(Objects::nonNull)
+                .filter(item -> isUrlValid(item.getUrl())) //validate item url
+                .filter(item -> !idsFromDb.contains(item.getId()) && !adUrlsFromDb.contains(item.getUrl())) // validate that item id and url not exists in db
+                //.collect(Collectors.toCollection(() -> new TreeSet<>((Comparator.comparing(OlxItem::getId))))).stream() //remove duplicates
+                //.collect(Collectors.toCollection(() -> new TreeSet<>(Comparator.comparing(OlxItem::getUrl)))) //remove duplicates
+                .forEach(item -> {
+                    olxItemRepository.save(item);
+                    idsFromDb.add(item.getId());
+                    adUrlsFromDb.add(item.getUrl());
+                    notificationService.notifyByTelegram(item);
+                });
             });
         });
     }

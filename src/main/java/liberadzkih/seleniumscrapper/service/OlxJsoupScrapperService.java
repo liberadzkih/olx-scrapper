@@ -3,7 +3,6 @@ package liberadzkih.seleniumscrapper.service;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import liberadzkih.seleniumscrapper.model.OlxItem;
@@ -19,7 +18,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class OlxJsoupScrapperService {
     private static final List<String> NO_ITEMS_FOUND_INFO_LIST = List.of("Znaleźliśmy  0 ogłoszeń", "Znaleźliśmy 0 ogłoszeń",
-        ">Nie znaleźliśmy żadnych", "Więcej ogłoszeń w kategorii Motoryzacja");
+        "Nie znaleźliśmy żadnych", "Więcej ogłoszeń w kategorii Motoryzacja");
 
     private static final String ELEMENTS_SELECTOR_1 = "div[data-cy=l-card]";
     private static final int TIMEOUT_MILLIS = 10000;
@@ -27,8 +26,10 @@ public class OlxJsoupScrapperService {
     public List<OlxItem> scrap(final String searchUrl) {
         try {
             final var document = getDocumentFromUrl(searchUrl);
-            final var elements = getElements(document);
-            return elements.stream()
+            if (document == null || checkIfNoCarsFound(document)) {
+                return List.of();
+            }
+            return document.select(ELEMENTS_SELECTOR_1).stream()
                 .map(this::getOlxItemFromElement)
                 .filter(Objects::nonNull)
                 .peek(item -> item.setSearchUrl(searchUrl))
@@ -53,16 +54,6 @@ public class OlxJsoupScrapperService {
         }
     }
 
-    List<Element> getElements(final Document document) {
-        if (document == null) {
-            return null;
-        }
-        if (containsAnyIllegalSentence(document)) {
-            return List.of();
-        }
-        return document.select(ELEMENTS_SELECTOR_1);
-    }
-
     private Document getDocumentFromUrl(final String url) {
         try {
             return Jsoup.parse(new URL(url), TIMEOUT_MILLIS);
@@ -70,10 +61,6 @@ public class OlxJsoupScrapperService {
             log.error("Failed to create document from url={}", url);
             return null;
         }
-    }
-
-    private boolean containsAnyIllegalSentence(final Document document) {
-        return NO_ITEMS_FOUND_INFO_LIST.stream().anyMatch(sentence -> document.toString().contains(sentence));
     }
 
     private String getAdUrlFromElement(final Element element) {
@@ -88,5 +75,14 @@ public class OlxJsoupScrapperService {
         } catch (final Exception e) {
             return 0;
         }
+    }
+
+    private boolean checkIfNoCarsFound(final Document document) {
+        final var totalCountElement = document.select("span[data-testid=total-count]").first();
+        if (totalCountElement == null) {
+            return false;
+        }
+        final var totalCountString = totalCountElement.text();
+        return NO_ITEMS_FOUND_INFO_LIST.stream().anyMatch(totalCountString::contains);
     }
 }
