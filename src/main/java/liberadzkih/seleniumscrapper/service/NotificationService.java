@@ -16,6 +16,8 @@ public class NotificationService {
     private final static String TOKEN = "6658320559:AAFkqFaFZtApxv-beQXQPeIxiVCIVOKgZJo";
     private final static String CHAT_ID = "-980434455";
 
+    private final TelegramBot telegramBot = new TelegramBot(TOKEN);
+
     public void notifyByTelegram(final OlxItem item) {
         final var response = sendTelegramMessage(buildMessage(item));
         log.info("Telegram notification: " + item);
@@ -25,7 +27,6 @@ public class NotificationService {
     }
 
     public SendResponse sendTelegramMessage(final String message) {
-        final var telegramBot = new TelegramBot(TOKEN);
         final var sendMessage = new SendMessage(CHAT_ID, message);
         return telegramBot.execute(sendMessage);
     }
